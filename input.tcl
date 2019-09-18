@@ -10,65 +10,6 @@ if { [file exists ${mol_name}.psf] == 0 } {
     exit 1
 }
 
-set ff "CHARMM"
-if { [file exists martini] > 0 } {
-    set ff "MARTINI"
-}
-
-if { (${ff} == "CHARMM") && ([file exists charmm] == 0) } {
-    print "The \"charmm\" directory is missing."
-    exit 1
-}
-
-# Choices: NVT, NPT, NPAT, NPgammaT
-set ensemble "NPT"
-if { [info exists env(ensemble)] > 0 } {
-    set ensemble $env(ensemble)
-}
-
-set pbc "yes"
-set pbc_aniso_xy "yes"
-
-set temperature 300.0
-set pressure 1.0
-set pressure 1.0
-set surface_tension 0.0
-
-foreach keyword { pbc pbc_aniso_xy temperature pressure surface_tension } {
-    if { [info exists env(${keyword})] > 0 } {
-        set ${keyword} $env(${keyword})
-        puts "Setting ${keyword} equal to $env(${keyword})"
-    }
-}
-
-set timestep 2.0
-if { ${ff} == "MARTINI" } {
-    set timestep 25.0
-}
-if { [info exists env(timestep)] > 0 } {
-    set timestep $env(timestep)
-}
-
-set cutoff 12.0
-if { [info exists env(cutoff)] > 0 } {
-    set cutoff $env(cutoff)
-}
-
-set log_freq 500
-if { [info exists env(log_freq)] > 0 } {
-    set log_freq $env(log_freq)
-}
-
-set dcd_freq 2500
-if { [info exists env(dcd_freq)] > 0 } {
-    set dcd_freq $env(dcd_freq)
-}
-
-set restart_freq [expr ${dcd_freq} * 10]
-if { [info exists env(restart_freq)] > 0 } {
-    set restart_freq $env(restart_freq)
-}
-
 
 # Job control
 set run                 [file rootname [file tail [info script]]]
@@ -110,7 +51,7 @@ if { (${run} != "${mol_name}.min") } {
     }
     if { [info exists env(job)] > 0 } {
         set job $env(job)
-    } 
+    }
 }
 
 if { [lindex [file split [info nameofexecutable]] end] == "tclsh" } {
@@ -120,9 +61,69 @@ if { [lindex [file split [info nameofexecutable]] end] == "tclsh" } {
 }
 
 
+set ff "CHARMM"
+if { [file exists martini] > 0 } {
+    set ff "MARTINI"
+}
+
+if { (${ff} == "CHARMM") && ([file exists charmm] == 0) } {
+    print "The \"charmm\" directory is missing."
+    exit 1
+}
+
+# Choices: NVT, NPT, NPAT, NPgammaT
+set ensemble "NPT"
+if { [info exists env(ensemble)] > 0 } {
+    set ensemble $env(ensemble)
+}
+
+set pbc "yes"
+set pbc_aniso_xy "yes"
+
+set temperature 300.0
+set pressure 1.0
+set pressure 1.0
+set surface_tension 0.0
+
+foreach keyword { pbc pbc_aniso_xy temperature pressure surface_tension } {
+    if { [info exists env(${keyword})] > 0 } {
+        set ${keyword} $env(${keyword})
+        puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable."
+    }
+}
+
+set timestep 2.0
+if { ${ff} == "MARTINI" } {
+    set timestep 25.0
+}
+if { [info exists env(timestep)] > 0 } {
+    set timestep $env(timestep)
+}
+
+set cutoff 12.0
+if { [info exists env(cutoff)] > 0 } {
+    set cutoff $env(cutoff)
+}
+
+set log_freq 500
+if { [info exists env(log_freq)] > 0 } {
+    set log_freq $env(log_freq)
+}
+
+set dcd_freq 2500
+if { [info exists env(dcd_freq)] > 0 } {
+    set dcd_freq $env(dcd_freq)
+}
+
+set restart_freq [expr ${dcd_freq} * 10]
+if { [info exists env(restart_freq)] > 0 } {
+    set restart_freq $env(restart_freq)
+}
+
+
 # Input
 
-# Physical description 
+# Physical description
 paraTypeCharmm          on
 structure               ${mol_name}.psf
 proc parameters_safe { param_file } {
@@ -130,7 +131,7 @@ proc parameters_safe { param_file } {
         print "Found parameters file ${param_file}."
         parameters      ${param_file}
     }
-} 
+}
 
 if { ${ff} == "CHARMM" } {
 
@@ -242,7 +243,7 @@ if { (${run} != "${mol_name}.min") } {
         # Per-atom Langevin temperature coupling
         langevin                on
         langevinTemp            ${temperature}
-        langevinDamping         10.0            
+        langevinDamping         10.0
 
     }
 
