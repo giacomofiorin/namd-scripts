@@ -80,29 +80,29 @@ if { [info exists env(ensemble)] > 0 } {
 set pbc "yes"
 set pbc_aniso_xy "yes"
 
-set temperature 300.0
-set pressure 1.0
-set pressure 1.0
-set surface_tension 0.0
 
-foreach keyword { pbc pbc_aniso_xy temperature pressure surface_tension } {
-    if { [info exists env(${keyword})] > 0 } {
-        set ${keyword} $env(${keyword})
-        puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable."
-    }
-}
+set cutoff 12.0
 
 set timestep 2.0
 if { ${ff} == "MARTINI" } {
     set timestep 25.0
 }
-if { [info exists env(timestep)] > 0 } {
-    set timestep $env(timestep)
-}
 
-set cutoff 12.0
-if { [info exists env(cutoff)] > 0 } {
-    set cutoff $env(cutoff)
+set temperature 300.0
+set pressure 1.0
+set pressure 1.0
+set surface_tension 0.0
+set langevinPistonPeriod 200.0
+set langevinPistonDecay 100.0
+
+foreach keyword { timestep cutoff \
+                      pbc pbc_aniso_xy temperature pressure surface_tension \
+                      langevinPistonPeriod langevinPistonDecay \
+                  } {
+    if { [info exists env(${keyword})] > 0 } {
+        set ${keyword} $env(${keyword})
+        puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable."
+    }
 }
 
 set log_freq 500
@@ -267,8 +267,8 @@ if { (${run} != "${mol_name}.min") } {
         useGroupPressure        on
         LangevinPiston          on
         LangevinPistonTarget    ${pressure}
-        LangevinPistonPeriod    200.0
-        LangevinPistonDecay     100.0
+        LangevinPistonPeriod    ${langevinPistonPeriod}
+        LangevinPistonDecay     ${langevinPistonDecay}
         LangevinPistonTemp      ${temperature}
     }
 }
