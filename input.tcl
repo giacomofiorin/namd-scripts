@@ -92,12 +92,13 @@ set temperature 300.0
 set pressure 1.0
 set pressure 1.0
 set surface_tension 0.0
+set langevinDamping 10.0
 set langevinPistonPeriod 200.0
 set langevinPistonDecay 100.0
 
 foreach keyword { timestep cutoff \
                       pbc pbc_aniso_xy temperature pressure surface_tension \
-                      langevinPistonPeriod langevinPistonDecay \
+                      langevinDamping langevinPistonPeriod langevinPistonDecay \
                   } {
     if { [info exists env(${keyword})] > 0 } {
         set ${keyword} $env(${keyword})
@@ -243,7 +244,7 @@ if { (${run} != "${mol_name}.min") } {
         # Per-atom Langevin temperature coupling
         langevin                on
         langevinTemp            ${temperature}
-        langevinDamping         10.0
+        langevinDamping         ${langevinDamping}
 
     }
 
