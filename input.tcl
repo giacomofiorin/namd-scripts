@@ -1,5 +1,8 @@
 # -*- tcl -*-
 
+# NAMD run script template. Contact: giacomo.fiorin@gmail.com
+
+
 set mol_name ppta
 if { [info exists env(mol_name)] > 0 } {
     set mol_name $env(mol_name)
