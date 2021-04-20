@@ -6,25 +6,37 @@ if { [info exists env(mol_name)] > 0 } {
 }
 
 if { [file exists ${mol_name}.psf] == 0 } {
-    print "The file \"${mol_name}.psf\" is missing."
+    if { [catch numPes] } {
+        puts stderr "Error: The file \"${mol_name}.psf\" is missing."
+    } else {
+        print "Error: The file \"${mol_name}.psf\" is missing."
+    }
     exit 1
 }
 
 
 # Job control
-set run                 [file rootname [file tail [info script]]]
+
+# Extract the run label from the name of this script
+set run [file rootname [file tail [info script]]]
 if { [info exists env(run_index)] > 0 } {
+    # For uncoupled ensembles, use this variable to identify the copy
     set run "${run}-$env(run_index)"
 } else {
     if { (${run} == "us") } {
+        # Umbrella sampling requires the flag to identify the window
         print "Missing run_index variable"
         exit 1
     }
 }
-set run                 ${mol_name}.${run}
-set old                 ""
-set job                 ${run}
-set ijob                0
+
+# Prefix run label with molecular system's label
+set run ${mol_name}.${run}
+
+set old ""
+set job ${run}
+set ijob 0
+
 
 if { (${run} != "${mol_name}.min") } {
     if { [info exists env(old)] > 0 } {
@@ -54,32 +66,36 @@ if { (${run} != "${mol_name}.min") } {
     }
 }
 
-if { [lindex [file split [info nameofexecutable]] end] == "tclsh" } {
-    # Print the name of this job
+if { [catch numPes] } {
+    # Not running NAMD: print the name of this job and exit
     puts ${job}
     exit
 }
 
 
-set ff "CHARMM"
+# Detect force field files
+
+if { [file exists charmm] > 0 } {
+    set ff "CHARMM"
+    set ff_folder "charmm"
+}
+
 if { [file exists martini] > 0 } {
     set ff "MARTINI"
 }
 
-if { (${ff} == "CHARMM") && ([file exists charmm] == 0) } {
-    print "The \"charmm\" directory is missing."
+if { [info exists ff] == 0 } {
+    print "No force field files found."
     exit 1
 }
 
-# Choices: NVT, NPT, NPAT, NPgammaT
-set ensemble "NPT"
-if { [info exists env(ensemble)] > 0 } {
-    set ensemble $env(ensemble)
-}
+
+# Set run parameters from environment variables
+
+set ensemble "NPT"; # Choices: NVT, NPT, NPAT, NPgammaT
 
 set pbc "yes"
 set pbc_aniso_xy "yes"
-
 
 set cutoff 12.0
 
@@ -96,29 +112,27 @@ set langevinDamping 10.0
 set langevinPistonPeriod 200.0
 set langevinPistonDecay 100.0
 
-foreach keyword { timestep cutoff \
+set log_freq 500
+set dcd_freq 2500
+if { ${ff} == "MARTINI" } {
+    set log_freq 2000
+    set dcd_freq 2000
+}
+set restart_freq [expr ${dcd_freq} * 10]
+
+foreach keyword { ensemble timestep cutoff \
                       pbc pbc_aniso_xy temperature pressure surface_tension \
                       langevinDamping langevinPistonPeriod langevinPistonDecay \
+                      log_freq dcd_freq restart_freq \
                   } {
     if { [info exists env(${keyword})] > 0 } {
+        puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable (default = [set ${keyword}])."
         set ${keyword} $env(${keyword})
-        puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable."
     }
 }
 
-set log_freq 500
-if { [info exists env(log_freq)] > 0 } {
-    set log_freq $env(log_freq)
-}
-
-set dcd_freq 2500
-if { [info exists env(dcd_freq)] > 0 } {
-    set dcd_freq $env(dcd_freq)
-}
-
-set restart_freq [expr ${dcd_freq} * 10]
-if { [info exists env(restart_freq)] > 0 } {
-    set restart_freq $env(restart_freq)
+if { [info exists env(restart_freq)] == 0 } {
+    set restart_freq [expr ${dcd_freq} * 10]
 }
 
 
@@ -136,13 +150,13 @@ proc parameters_safe { param_file } {
 
 if { ${ff} == "CHARMM" } {
 
-    parameters_safe     charmm/par_all36_prot.prm
-    parameters_safe     charmm/par_all36_lipid.prm
-    parameters_safe     charmm/par_all36_na.prm
-    parameters_safe     charmm/par_all36_carb.prm
-    parameters_safe     charmm/par_all36_cgenff.prm
-    parameters_safe     charmm/par_all36_cgenff_${mol_name}.prm
-    parameters_safe     charmm/par_water_ions.prm
+    parameters_safe     ${ff_folder}/par_all36_prot.prm
+    parameters_safe     ${ff_folder}/par_all36_lipid.prm
+    parameters_safe     ${ff_folder}/par_all36_na.prm
+    parameters_safe     ${ff_folder}/par_all36_carb.prm
+    parameters_safe     ${ff_folder}/par_all36_cgenff.prm
+    parameters_safe     ${ff_folder}/par_all36_cgenff_${mol_name}.prm
+    parameters_safe     ${ff_folder}/par_water_ions.prm
 
     exclude             scaled1-4
     1-4scaling          1.0
@@ -337,21 +351,24 @@ outputTiming            ${log_freq}
 
 
 # Colvars configuration
-if { [file exists colvars.tcl] > 0 } {
-    source colvars.tcl
-}
 if { [file exists ${run}.colvars.tcl] > 0 } {
     source ${run}.colvars.tcl
+} else {
+    if { [file exists colvars.tcl] > 0 } {
+        source colvars.tcl
+    }
 }
 
 
-# run
+# Run for the required steps
 if { (${run} != "${mol_name}.min") } {
     run                ${numsteps}
 } else {
-    minimize           ${numsteps}
-    # Cleanup unneeded files
+
+    minimize ${numsteps}
+
     foreach ext { "coor" "vel" "xsc" } {
+        # Cleanup unneeded backup files
         foreach backup_ext { "old" "BAK" } {
             file delete ${job}.${ext}.${backup_ext}
         }
