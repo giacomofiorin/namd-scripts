@@ -64,8 +64,14 @@ if { (${run} != "${mol_name}.min") } {
         }
         set job [format "%s.%06d" ${run} ${ijob}]
     }
-    if { [info exists env(job)] > 0 } {
-        set job $env(job)
+}
+
+
+if { [catch numReplicas] == 0 } {
+    set n_replicas [numReplicas]
+    if { ${n_replicas} > 1 } {
+        # Append replica label if multiple replicas are in use
+        set job [format "${job}.rep%03d" [myReplica]]
     }
 }
 
@@ -365,7 +371,21 @@ if { [file exists ${run}.colvars.tcl] > 0 } {
 
 # Run for the required steps
 if { (${run} != "${mol_name}.min") } {
-    run                ${numsteps}
+
+    if { ${n_replicas} == 1 } {
+        run ${numsteps}
+    } else {
+        # Run multiple-replicas scripts
+        if { [file exists ${run}.replicas.tcl] > 0 } {
+            print "RUN ${run}.replicas.tcl"
+            source ${run}.replicas.tcl
+        } else {
+            if { [file exists replicas.tcl] > 0 } {
+                source replicas.tcl
+            }
+        }
+    }
+
 } else {
 
     minimize ${numsteps}
