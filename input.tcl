@@ -91,11 +91,7 @@ if { [file exists charmm] > 0 } {
 
 if { [file exists martini] > 0 } {
     set ff "MARTINI"
-}
-
-if { [info exists ff] == 0 } {
-    print "No force field files found."
-    exit 1
+    set ff_folder "martini"
 }
 
 
@@ -103,15 +99,12 @@ if { [info exists ff] == 0 } {
 
 set ensemble "NPT"; # Choices: NVT, NPT, NPAT, NPgammaT
 
+set ff "CHARMM"
+
 set pbc "yes"
 set pbc_aniso_xy "yes"
 
 set cutoff 12.0
-
-set timestep 2.0
-if { ${ff} == "MARTINI" } {
-    set timestep 25.0
-}
 
 set temperature 300.0
 set pressure 1.0
@@ -121,15 +114,61 @@ set langevinDamping 10.0
 set langevinPistonPeriod 200.0
 set langevinPistonDecay 100.0
 
-set log_freq 500
-set dcd_freq 2500
-if { ${ff} == "MARTINI" } {
-    set log_freq 2000
-    set dcd_freq 2000
-}
-set restart_freq [expr ${dcd_freq} * 10]
 
-foreach keyword { ensemble timestep cutoff \
+proc update_defaults {} {
+    global ff
+    global ff_folder
+    global timestep
+
+    global log_freq
+    global dcd_freq
+    global restart_freq
+
+    if { [info exists ff] == 0 } {
+        # Fail on first call of this function when ff is undefined
+        print "ERROR: Force field undefined."
+        exit 1
+    }
+
+    if { [info exists ff_folder] == 0 } {
+        if { ${ff} == "CHARMM" } {
+            set ff_folder "charmm"
+        }
+        if { ${ff} == "MARTINI" } {
+            set ff_folder "martini"
+        }
+    }
+
+    if { [info exists timestep] == 0 } {
+        if { ${ff} == "CHARMM" } {
+            set timestep 2.0
+        }
+        if { ${ff} == "MARTINI" } {
+            set timestep 25.0
+        }
+    }
+
+    if { [info exists log_freq] == 0 } {
+        set log_freq 500
+        if { ${ff} == "MARTINI" } {
+            set log_freq 2000
+        }
+    }
+
+    if { [info exists dcd_freq] == 0 } {
+        set dcd_freq 2500
+        if { ${ff} == "MARTINI" } {
+            set dcd_freq 2000
+        }
+    }
+
+    if { ([info exists restart_freq] == 0) && [info exists dcd_freq] == 1 } {
+        set restart_freq [expr ${dcd_freq} * 100]
+    }
+}
+
+
+foreach keyword { ff ff_folder ensemble timestep cutoff \
                       pbc pbc_aniso_xy temperature pressure surface_tension \
                       langevinDamping langevinPistonPeriod langevinPistonDecay \
                       log_freq dcd_freq restart_freq \
@@ -137,11 +176,8 @@ foreach keyword { ensemble timestep cutoff \
     if { [info exists env(${keyword})] > 0 } {
         puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable (default = [set ${keyword}])."
         set ${keyword} $env(${keyword})
+        update_defaults
     }
-}
-
-if { [info exists env(restart_freq)] == 0 } {
-    set restart_freq [expr ${dcd_freq} * 10]
 }
 
 
@@ -151,6 +187,7 @@ if { [info exists env(restart_freq)] == 0 } {
 paraTypeCharmm          on
 structure               ${mol_name}.psf
 proc parameters_safe { param_file } {
+    # Allow including optional files, doesn't fail when absent
     if { [file exists ${param_file}] > 0 } {
         print "Found parameters file ${param_file}."
         parameters      ${param_file}
@@ -175,7 +212,7 @@ if { ${ff} == "CHARMM" } {
 
 if { ${ff} == "MARTINI" } {
 
-    parameters_safe     martini/martini_v2.2.namd.prm
+    parameters_safe     ${ff_folder}/martini_v2.2.namd.prm
 
     cosAngles           on
     exclude             1-2
