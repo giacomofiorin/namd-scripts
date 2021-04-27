@@ -197,12 +197,12 @@ proc parameters_safe { param_file } {
 
 if { ${ff} == "CHARMM" } {
 
-    parameters_safe     ${ff_folder}/par_all36_prot.prm
     parameters_safe     ${ff_folder}/par_all36_lipid.prm
     parameters_safe     ${ff_folder}/par_all36_na.prm
     parameters_safe     ${ff_folder}/par_all36_carb.prm
     parameters_safe     ${ff_folder}/par_all36_cgenff.prm
     parameters_safe     ${ff_folder}/par_all36_cgenff_${mol_name}.prm
+    parameters_safe     ${ff_folder}/par_all36m_prot.prm
     parameters_safe     ${ff_folder}/par_water_ions.prm
 
     exclude             scaled1-4
