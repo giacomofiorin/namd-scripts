@@ -180,6 +180,7 @@ foreach keyword { ff ff_folder ensemble timestep cutoff \
     }
 }
 
+update_defaults
 
 # Input
 
