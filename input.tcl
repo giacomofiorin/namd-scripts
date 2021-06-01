@@ -110,15 +110,17 @@ set temperature 300.0
 set pressure 1.0
 set pressure 1.0
 set surface_tension 0.0
-set langevinDamping 10.0
 set langevinPistonPeriod 200.0
 set langevinPistonDecay 100.0
 
 
 proc update_defaults {} {
+
     global ff
     global ff_folder
+
     global timestep
+    global langevinDamping
 
     global log_freq
     global dcd_freq
@@ -145,6 +147,15 @@ proc update_defaults {} {
         }
         if { ${ff} == "MARTINI" } {
             set timestep 25.0
+        }
+    }
+
+    if { [info exists langevinDamping] == 0 } {
+        if { ${ff} == "CHARMM" } {
+            set langevinDamping 10.0
+        }
+        if { ${ff} == "MARTINI" } {
+            set langevinDamping 1.0
         }
     }
 
