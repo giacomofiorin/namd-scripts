@@ -220,6 +220,7 @@ if { ${ff} == "CHARMM" } {
     1-4scaling          1.0
     rigidBonds          all
     useSettle           on
+    vdwForceSwitching   on
 }
 
 if { ${ff} == "MARTINI" } {
