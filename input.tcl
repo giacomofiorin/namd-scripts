@@ -45,6 +45,7 @@ if { (${run} != "${mol_name}.min") } {
     if { [info exists env(old)] > 0 } {
         set old $env(old)
     } else {
+        # Auto-generate job label
         set coor_files [list]
         catch {
             set coor_files [glob -type f \
@@ -53,10 +54,12 @@ if { (${run} != "${mol_name}.min") } {
         if { [llength ${coor_files}] > 0 } {
             set coor_files [lsort ${coor_files}]
             set last_coor_file [lindex ${coor_files} end]
+            # Get the job index from the last .coor file's name
             set last_ijob [string trimleft \
 		[file extension [file rootname ${last_coor_file}]] ".0"]
             if { [file extension [file rootname ${last_coor_file}]] ==
                  ".000000" } {
+                # Special case (when everything is trimmed out)
                 set last_ijob 0
             }
             set ijob [expr ${last_ijob} + 1]
