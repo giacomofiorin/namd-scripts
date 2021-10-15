@@ -108,6 +108,7 @@ set pbc "yes"
 set pbc_aniso_xy "yes"
 
 set cutoff 12.0
+set vdwForceSwitching on
 
 set temperature 300.0
 set pressure 1.0
@@ -223,7 +224,7 @@ if { ${ff} == "CHARMM" } {
     1-4scaling          1.0
     rigidBonds          all
     useSettle           on
-    vdwForceSwitching   on
+    vdwForceSwitching   ${vdwForceSwitching}
 }
 
 if { ${ff} == "MARTINI" } {
@@ -243,9 +244,12 @@ switchdist              [expr ${cutoff} - 2.0]
 cutoff                  ${cutoff}
 pairlistdist            [expr ${cutoff} + 1.5]
 if { ${ff} == "CHARMM" } {
-    stepspercycle       20
+    nonbondedFreq       1
+    fullElectFrequency  3
+    stepspercycle       24
 }
 if { ${ff} == "MARTINI" } {
+    nonbondedFreq       1
     stepspercycle       10
 }
 margin                  2.0
