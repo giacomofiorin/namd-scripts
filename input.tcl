@@ -109,6 +109,7 @@ set pbc_aniso_xy "yes"
 
 set cutoff 12.0
 set vdwForceSwitching on
+set fullElectFrequency 3
 
 set temperature 300.0
 set pressure 1.0
@@ -164,7 +165,9 @@ proc update_defaults {} {
     }
 
     if { [info exists log_freq] == 0 } {
-        set log_freq 500
+        if { ${ff} == "CHARMM" } {
+            set log_freq 600
+        }
         if { ${ff} == "MARTINI" } {
             set log_freq 2000
         }
@@ -184,6 +187,7 @@ proc update_defaults {} {
 
 
 foreach keyword { ff ff_folder ensemble timestep cutoff \
+                      fullElectFrequency vdwForceSwitching \
                       pbc pbc_aniso_xy temperature pressure surface_tension \
                       langevinDamping langevinPistonPeriod langevinPistonDecay \
                       log_freq dcd_freq restart_freq \
@@ -250,6 +254,7 @@ if { ${ff} == "CHARMM" } {
 }
 if { ${ff} == "MARTINI" } {
     nonbondedFreq       1
+    fullElectFrequency  1
     stepspercycle       10
 }
 margin                  2.0
@@ -366,9 +371,9 @@ if { [info exists env(numsteps)] > 0 } {
 } else {
     if { (${run} != "${mol_name}.min") } {
         # 1 ns
-        set numsteps    500000
+        set numsteps    [expr 25000 * [stepspercycle]]
     } else {
-        set numsteps    2000
+        set numsteps    [expr 100 * [stepspercycle]]
     }
 }
 
