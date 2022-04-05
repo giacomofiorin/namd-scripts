@@ -20,11 +20,21 @@ if { [file exists ${mol_name}.psf] == 0 } {
 
 # Job control
 
+# Define run_index based on myReplica
+if { [catch numReplicas] == 0 } {
+    set n_replicas [numReplicas]
+    if { ${n_replicas} > 1 } {
+        set env(run_index) [expr 100 + [myReplica]]
+    }
+}
+
 # Extract the run label from the name of this script
 set run [file rootname [file tail [info script]]]
+set run_path_prefix ""
 if { [info exists env(run_index)] > 0 } {
     # For uncoupled ensembles, use this variable to identify the copy
     set run "${run}-$env(run_index)"
+    set run_path_prefix "${run}/"
 } else {
     if { (${run} == "us") } {
         # Umbrella sampling requires the flag to identify the window
@@ -48,8 +58,7 @@ if { (${run} != "${mol_name}.min") } {
         # Auto-generate job label
         set coor_files [list]
         catch {
-            set coor_files [glob -type f \
-                "${run}.\[0-9\]\[0-9\]\[0-9\]\[0-9\]\[0-9\]\[0-9\].coor"]
+            set coor_files [glob -type f "${run_path_prefix}${run}.\[0-9\]\[0-9\]\[0-9\]\[0-9\]\[0-9\]\[0-9\].coor"]
         } err
         if { [llength ${coor_files}] > 0 } {
             set coor_files [lsort ${coor_files}]
@@ -69,14 +78,6 @@ if { (${run} != "${mol_name}.min") } {
     }
 }
 
-
-if { [catch numReplicas] == 0 } {
-    set n_replicas [numReplicas]
-    if { ${n_replicas} > 1 } {
-        # Append replica label if multiple replicas are in use
-        set job [format "${job}.rep%03d" [myReplica]]
-    }
-}
 
 if { [catch numPes] } {
     # Not running NAMD: print the name of this job and exit
@@ -266,22 +267,22 @@ if { ${pbc} == "yes" && ${ff} != "MARTINI" } {
     #PMEGridSizeZ        72
     PMEGridSpacing      0.9
     FFTWUseWisdom       yes
-    FFTWWisdomFile      .fftw_wisdom.txt
+    FFTWWisdomFile      ${run_path_prefix}.fftw_wisdom.txt
 }
 
 
 # Initial data and boundary conditions
-coordinates             ${mol_name}.pdb
+coordinates             ${run_path_prefix}${mol_name}.pdb
 if { ${ijob} > 0 } {
-    binCoordinates      ${old}.coor
-    binVelocities       ${old}.vel
+    binCoordinates      ${run_path_prefix}${old}.coor
+    binVelocities       ${run_path_prefix}${old}.vel
     if { ${pbc} == "yes" } {
-    extendedSystem      ${old}.xsc
+    extendedSystem      ${run_path_prefix}${old}.xsc
     }
 } elseif { (${run} != "${mol_name}.min") } {
 
     if { [info exists env(run_index)] > 0 } {
-        binCoordinates ${run}.initial.coor
+        binCoordinates ${run_path_prefix}${run}.initial.coor
     } else {
         if { [file exists ${mol_name}.eq.coor] } {
             binCoordinates  ${mol_name}.eq.coor
@@ -293,7 +294,7 @@ if { ${ijob} > 0 } {
     temperature         ${temperature}
     if { ${pbc} == "yes" } {
         if { [info exists env(run_index)] > 0 } {
-            extendedSystem ${run}.initial.xsc
+            extendedSystem ${run_path_prefix}${run}.initial.xsc
         } else {
             if { [file exists ${mol_name}.eq.xsc] } {
                 extendedSystem      ${mol_name}.eq.xsc
@@ -380,11 +381,11 @@ if { [info exists env(numsteps)] > 0 } {
 }
 
 
-if { [file exists ${mol_name}.posre.pdb] > 0 } {
+if { [file exists ${run_path_prefix}${mol_name}.posre.pdb] > 0 } {
     # Position restraints
     constraints         on
-    consRef             ${mol_name}.pdb
-    consKFile           ${mol_name}.posre.pdb
+    consRef             ${run_path_prefix}${mol_name}.pdb
+    consKFile           ${run_path_prefix}${mol_name}.posre.pdb
     consKCol            O
 }
 
@@ -392,14 +393,14 @@ if { [file exists ${mol_name}.posre.pdb] > 0 } {
 # Output
 
 # Main output and restarts
-outputName              ${job}
+outputName              ${run_path_prefix}${job}
 binaryOutput            yes
 if { ${restart_freq} > 0 } {
     if { (${run} == "${mol_name}.min") } {
-        restartName     ${job}
+        restartName     ${run_path_prefix}${job}
         restartFreq     100
     } else {
-        restartName     ${job}.rs
+        restartName     ${run_path_prefix}${job}.rs
         restartFreq     ${restart_freq}
     }
     binaryRestart       yes
@@ -407,11 +408,11 @@ if { ${restart_freq} > 0 } {
 
 # Trajectory output
 if { (${run} != "${mol_name}.min") } {
-    DCDfile             ${job}.coor.dcd
+    DCDfile             ${run_path_prefix}${job}.coor.dcd
     DCDfreq             ${dcd_freq}
     if { (${pbc} == "yes") } {
         DCDUnitCell     yes
-        XSTfile         ${job}.xst
+        XSTfile         ${run_path_prefix}${job}.xst
         XSTfreq         ${log_freq}
     }
 }
@@ -424,12 +425,8 @@ outputTiming            ${log_freq}
 
 
 # Colvars configuration
-if { [file exists ${run}.colvars.tcl] > 0 } {
-    source ${run}.colvars.tcl
-} else {
-    if { [file exists colvars.tcl] > 0 } {
-        source colvars.tcl
-    }
+if { [file exists ${run_path_prefix}colvars.tcl] > 0 } {
+    source ${run_path_prefix}colvars.tcl
 }
 
 
@@ -440,13 +437,10 @@ if { (${run} != "${mol_name}.min") } {
         run ${numsteps}
     } else {
         # Run multiple-replicas scripts
-        if { [file exists ${run}.replicas.tcl] > 0 } {
-            print "RUN ${run}.replicas.tcl"
-            source ${run}.replicas.tcl
+        if { [file exists replicas.tcl] > 0 } {
+            source replicas.tcl
         } else {
-            if { [file exists replicas.tcl] > 0 } {
-                source replicas.tcl
-            }
+            run ${numsteps}
         }
     }
 
