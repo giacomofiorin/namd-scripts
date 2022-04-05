@@ -3,7 +3,7 @@
 # NAMD run script template. Contact: giacomo.fiorin@gmail.com
 
 
-set mol_name ppta
+set mol_name popc-dopc_400
 if { [info exists env(mol_name)] > 0 } {
     set mol_name $env(mol_name)
 }
@@ -115,6 +115,7 @@ set temperature 300.0
 set pressure 1.0
 set pressure 1.0
 set surface_tension 0.0
+set langevinDamping -1.0
 set langevinPistonPeriod 200.0
 set langevinPistonDecay 100.0
 
@@ -155,9 +156,9 @@ proc update_defaults {} {
         }
     }
 
-    if { [info exists langevinDamping] == 0 } {
+    if { ${langevinDamping} < 0.0 } {
         if { ${ff} == "CHARMM" } {
-            set langevinDamping 10.0
+            set langevinDamping 1.0
         }
         if { ${ff} == "MARTINI" } {
             set langevinDamping 1.0
@@ -304,9 +305,9 @@ if { ${ijob} > 0 } {
         }
     }
 } else {
-    temperature         0.0
+    temperature 0.0
     if { ${pbc} == "yes" } {
-    extendedSystem      ${mol_name}.xsc
+        extendedSystem ${mol_name}.xsc
     }
 }
 
@@ -324,7 +325,7 @@ if { (${run} != "${mol_name}.min") } {
 
     # Thermodynamic ensemble options
 
-    if { (${ensemble} == "NVT") || (${ensemble} == "NPT") } {
+    if { ${ensemble} != "NVE" } {
 
         # Per-atom Langevin temperature coupling
         langevin                on
@@ -333,7 +334,8 @@ if { (${run} != "${mol_name}.min") } {
 
     }
 
-    if { (${pbc} == "yes") && (${ensemble} != "NVT") } {
+    if { (${pbc} == "yes") && (${ensemble} != "NVE") && \
+             (${ensemble} != "NVT") } {
 
         # Langevin piston pressure coupling
 
