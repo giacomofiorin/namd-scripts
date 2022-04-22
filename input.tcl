@@ -57,7 +57,7 @@ set job ${run}
 set ijob 0
 
 
-if { (${run} != "${mol_name}.min") } {
+if { (${run} != "${mol_name}.min") && (${run} != "${mol_name}.test") } {
     if { [info exists env(old)] > 0 } {
         set old $env(old)
     } else {
