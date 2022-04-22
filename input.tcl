@@ -390,7 +390,7 @@ if { [info exists env(numsteps)] > 0 } {
 if { [file exists ${run_path_prefix}${mol_name}.posre.pdb] > 0 } {
     # Position restraints
     constraints         on
-    consRef             ${run_path_prefix}${mol_name}.pdb
+    consRef             ${run_path_prefix}${mol_name}.posre.pdb
     consKFile           ${run_path_prefix}${mol_name}.posre.pdb
     consKCol            O
 }
