@@ -1,19 +1,23 @@
 # -*- tcl -*-
 
 # NAMD run script template. Contact: giacomo.fiorin@gmail.com
+# Version: 2022-04-22
 
 
-set mol_name popc-dopc_400
+if { [catch numPes] } {
+    # Wrap NAMD's print command
+    proc print { args } {
+        puts [join ${args}]
+    }
+}
+
+set mol_name popc_400
 if { [info exists env(mol_name)] > 0 } {
     set mol_name $env(mol_name)
 }
 
 if { [file exists ${mol_name}.psf] == 0 } {
-    if { [catch numPes] } {
-        puts stderr "Error: The file \"${mol_name}.psf\" is missing."
-    } else {
-        print "Error: The file \"${mol_name}.psf\" is missing."
-    }
+    print "Error: The file \"${mol_name}.psf\" is missing."
     exit 1
 }
 
@@ -30,15 +34,17 @@ if { [catch numReplicas] == 0 } {
 
 # Extract the run label from the name of this script
 set run [file rootname [file tail [info script]]]
+
+# Handle different replicas for ensemble runs
 set run_path_prefix ""
 if { [info exists env(run_index)] > 0 } {
-    # For uncoupled ensembles, use this variable to identify the copy
+    # Set replica-specific run label
     set run "${run}-$env(run_index)"
+    # Assume that each replica runs in a separate sub-folder
     set run_path_prefix "${run}/"
 } else {
     if { (${run} == "us") } {
-        # Umbrella sampling requires the flag to identify the window
-        print "Missing run_index variable"
+        print "Error: Undefined run_index variable for umbrella-sampling jobs"
         exit 1
     }
 }
@@ -55,7 +61,7 @@ if { (${run} != "${mol_name}.min") } {
     if { [info exists env(old)] > 0 } {
         set old $env(old)
     } else {
-        # Auto-generate job label
+        # Auto-generate this job's label
         set coor_files [list]
         catch {
             set coor_files [glob -type f "${run_path_prefix}${run}.\[0-9\]\[0-9\]\[0-9\]\[0-9\]\[0-9\]\[0-9\].coor"]
@@ -81,7 +87,7 @@ if { (${run} != "${mol_name}.min") } {
 
 if { [catch numPes] } {
     # Not running NAMD: print the name of this job and exit
-    puts ${job}
+    print ${job}
     exit
 }
 
