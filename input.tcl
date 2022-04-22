@@ -407,6 +407,10 @@ if { (${run} != "${mol_name}.min") } {
     timestep ${timestep}
 }
 
+if { [info exists env(CUDASOA)] > 0 } {
+    CUDASOAIntegrate yes
+}
+
 if { [info exists env(numsteps)] > 0 } {
     set numsteps        $env(numsteps)
 } else {
