@@ -472,29 +472,37 @@ if { [file exists ${run_path_prefix}colvars.tcl] > 0 } {
 }
 
 
-# Run for the required steps
-if { (${run} != "${mol_name}.min") } {
+# Custom run job
+if { [file exists ${run_path_prefix}run.namd] > 0 } {
 
-    if { ${n_replicas} == 1 } {
-        run ${numsteps}
-    } else {
-        # Run multiple-replicas scripts
-        if { [file exists replicas.tcl] > 0 } {
-            source replicas.tcl
-        } else {
-            run ${numsteps}
-        }
-    }
+    source ${run_path_prefix}run.namd
 
 } else {
 
-    minimize ${numsteps}
+    # Run for the required steps
+    if { (${run} != "${mol_name}.min") } {
 
-    foreach ext { "coor" "vel" "xsc" } {
-        # Cleanup unneeded backup files
-        foreach backup_ext { "old" "BAK" } {
-            file delete ${job}.${ext}.${backup_ext}
+        if { ${n_replicas} == 1 } {
+            run ${numsteps}
+        } else {
+            # Run multiple-replicas scripts
+            if { [file exists replicas.tcl] > 0 } {
+                source replicas.tcl
+            } else {
+                run ${numsteps}
+            }
         }
+
+    } else {
+
+        minimize ${numsteps}
+
+        foreach ext { "coor" "vel" "xsc" } {
+            # Cleanup unneeded backup files
+            foreach backup_ext { "old" "BAK" } {
+                file delete ${job}.${ext}.${backup_ext}
+            }
+        }
+        file delete ${job}.vel
     }
-    file delete ${job}.vel
 }
