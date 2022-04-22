@@ -110,33 +110,57 @@ if { [file exists martini] > 0 } {
 set ensemble "NPT"; # Choices: NVT, NPT, NPAT, NPgammaT
 
 set ff "CHARMM"
+set ff_folder ""
 
 set pbc "yes"
 set pbc_aniso_xy "yes"
 
 set cutoff 12.0
 set vdwForceSwitching on
-set fullElectFrequency 3
+set nonbondedFreq 1
+set fullElectFrequency -1
+set stepspercycle -1
+
+set timestep -1.0
 
 set temperature 300.0
-set pressure 1.0
 set pressure 1.0
 set surface_tension 0.0
 set langevinDamping -1.0
 set langevinPistonPeriod 200.0
 set langevinPistonDecay 100.0
 
+set dcd_freq -1
+set log_freq -1
+set restart_freq -1
 
 proc update_defaults {} {
 
     global ff
     global ff_folder
 
-    global timestep
-    global langevinDamping
+    global ensemble
 
-    global log_freq
+    global pbc
+    global pbc_aniso_xy
+
+    global cutoff
+    global vdwForceSwitching
+    global nonbondedFreq
+    global fullElectFrequency
+    global stepspercycle
+
+    global timestep
+
+    global temperature
+    global pressure
+    global surface_tension
+    global langevinDamping
+    global langevinPistonPeriod
+    global langevinPistonDecay
+
     global dcd_freq
+    global log_freq
     global restart_freq
 
     if { [info exists ff] == 0 } {
@@ -145,7 +169,7 @@ proc update_defaults {} {
         exit 1
     }
 
-    if { [info exists ff_folder] == 0 } {
+    if { ${ff_folder} == "" } {
         if { ${ff} == "CHARMM" } {
             set ff_folder "charmm"
         }
@@ -154,12 +178,23 @@ proc update_defaults {} {
         }
     }
 
-    if { [info exists timestep] == 0 } {
+    if { ${timestep} < 0.0 } {
         if { ${ff} == "CHARMM" } {
             set timestep 2.0
         }
         if { ${ff} == "MARTINI" } {
             set timestep 25.0
+        }
+    }
+
+    if { ${fullElectFrequency} < 0 } {
+        if { ${ff} == "CHARMM" } {
+            set fullElectFrequency 3
+            set stepspercycle 24
+        }
+        if { ${ff} == "MARTINI" } {
+            set fullElectFrequency 1
+            set stepspercycle 10
         }
     }
 
@@ -172,7 +207,7 @@ proc update_defaults {} {
         }
     }
 
-    if { [info exists log_freq] == 0 } {
+    if { ${log_freq} < 0 } {
         if { ${ff} == "CHARMM" } {
             set log_freq 600
         }
@@ -181,27 +216,31 @@ proc update_defaults {} {
         }
     }
 
-    if { [info exists dcd_freq] == 0 } {
+    if { ${dcd_freq} < 0 } {
         set dcd_freq 2500
         if { ${ff} == "MARTINI" } {
             set dcd_freq 2000
         }
     }
 
-    if { ([info exists restart_freq] == 0) && [info exists dcd_freq] == 1 } {
+    if { (${restart_freq} < 0) && (${dcd_freq} >= 0) } {
         set restart_freq [expr ${dcd_freq} * 100]
     }
 }
 
 
-foreach keyword { ff ff_folder ensemble timestep cutoff \
-                      fullElectFrequency vdwForceSwitching \
+foreach keyword { ff ff_folder ensemble timestep cutoff vdwForceSwitching \
+                      nonbondedFreq fullElectFrequency stepspercycle \
                       pbc pbc_aniso_xy temperature pressure surface_tension \
                       langevinDamping langevinPistonPeriod langevinPistonDecay \
                       log_freq dcd_freq restart_freq \
                   } {
     if { [info exists env(${keyword})] > 0 } {
-        puts "Setting ${keyword} = \"$env(${keyword})\" from environment variable (default = [set ${keyword}])."
+        if { [info exists ${keyword}] > 0 } {
+            print "Setting ${keyword} = \"$env(${keyword})\" from environment variable (default = [set ${keyword}])."
+        } else {
+            print "Setting ${keyword} = \"$env(${keyword})\" from environment variable."
+        }
         set ${keyword} $env(${keyword})
         update_defaults
     }
@@ -255,16 +294,9 @@ if { ${ff} == "MARTINI" } {
 switchdist              [expr ${cutoff} - 2.0]
 cutoff                  ${cutoff}
 pairlistdist            [expr ${cutoff} + 1.5]
-if { ${ff} == "CHARMM" } {
-    nonbondedFreq       1
-    fullElectFrequency  3
-    stepspercycle       24
-}
-if { ${ff} == "MARTINI" } {
-    nonbondedFreq       1
-    fullElectFrequency  1
-    stepspercycle       10
-}
+nonbondedFreq           ${nonbondedFreq}
+fullElectFrequency      ${fullElectFrequency}
+stepspercycle           ${stepspercycle}
 margin                  2.0
 if { ${pbc} == "yes" && ${ff} != "MARTINI" } {
     PME                 yes
