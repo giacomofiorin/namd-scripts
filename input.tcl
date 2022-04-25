@@ -351,7 +351,9 @@ if { ${ijob} > 0 } {
 }
 
 COMmotion no
-zeroMomentum yes
+if { [info exists env(CUDASOA)] == 0 } {
+    zeroMomentum yes
+}
 if { ${pbc} == "yes" } {
     if { ${ff} == "CHARMM" } {
         wrapAll yes
